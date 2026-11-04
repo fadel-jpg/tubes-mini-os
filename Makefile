@@ -2,11 +2,11 @@
 # Makefile - Build System for Mini-OS (x86 32-bit Multiboot)
 # =============================================================================
 
-# Toolchain configuration (uses standard gcc with -m32 or i686-elf-gcc if set)
-CC      ?= gcc
-LD      ?= ld
-AS      ?= nasm
-QEMU    ?= qemu-system-i386
+# Toolchain configuration
+CC      := gcc
+LD      := ld
+AS      := nasm
+QEMU    := qemu-system-i386
 
 # Compiler, Assembler, and Linker flags
 CFLAGS  := -m32 -ffreestanding -O2 -Wall -Wextra -fno-exceptions \
@@ -23,17 +23,14 @@ ISO_DIR   := $(BUILD_DIR)/isodir
 KERNEL_BIN := $(BIN_DIR)/kernel.bin
 KERNEL_ISO := $(BIN_DIR)/mini-os.iso
 
-# Source and Object files
-ASM_SRC := boot/boot.asm
-C_SRCS  := kernel/kernel.c kernel/shell.c drivers/vga.c drivers/keyboard.c
-
+# Object files
 OBJS    := $(BUILD_DIR)/boot.o \
            $(BUILD_DIR)/kernel.o \
            $(BUILD_DIR)/shell.o \
            $(BUILD_DIR)/vga.o \
            $(BUILD_DIR)/keyboard.o
 
-.PHONY: all build run iso run-iso clean check-env
+.PHONY: all build run iso run-iso clean
 
 # Default target
 all: build
@@ -41,25 +38,28 @@ all: build
 # Build the Multiboot kernel binary
 build: $(KERNEL_BIN)
 
-$(BUILD_DIR) $(BIN_DIR):
-	mkdir -p $@
-
-$(BUILD_DIR)/boot.o: boot/boot.asm | $(BUILD_DIR)
+$(BUILD_DIR)/boot.o: boot/boot.asm
+	@mkdir -p $(BUILD_DIR)
 	$(AS) $(ASFLAGS) $< -o $@
 
-$(BUILD_DIR)/kernel.o: kernel/kernel.c | $(BUILD_DIR)
+$(BUILD_DIR)/kernel.o: kernel/kernel.c
+	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD_DIR)/shell.o: kernel/shell.c | $(BUILD_DIR)
+$(BUILD_DIR)/shell.o: kernel/shell.c
+	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD_DIR)/vga.o: drivers/vga.c | $(BUILD_DIR)
+$(BUILD_DIR)/vga.o: drivers/vga.c
+	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD_DIR)/keyboard.o: drivers/keyboard.c | $(BUILD_DIR)
+$(BUILD_DIR)/keyboard.o: drivers/keyboard.c
+	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(KERNEL_BIN): $(OBJS) linker.ld | $(BIN_DIR)
+$(KERNEL_BIN): $(OBJS) linker.ld
+	@mkdir -p $(BIN_DIR)
 	$(LD) $(LDFLAGS) -o $@ $(OBJS)
 	@echo "[SUCCESS] Kernel binary built at: $(KERNEL_BIN)"
 
@@ -83,4 +83,3 @@ run-iso: iso
 clean:
 	rm -rf $(BUILD_DIR) $(BIN_DIR)
 	@echo "[CLEAN] Removed build/ and bin/ directories."
-
