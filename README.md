@@ -1,6 +1,6 @@
-# Mini-OS (x86 32-bit Bare-Metal Kernel)
+# Dalfon OS — Mini-OS (x86 32-bit Bare-Metal Kernel)
 
-Proyek sistem operasi *bare-metal* 32-bit (`i686`) yang dibuat dari nol menggunakan bahasa **C (freestanding)** dan **NASM Assembly** dengan standar **GNU Multiboot v1**.
+Proyek sistem operasi *bare-metal* **Dalfon OS** 32-bit (`i686`) yang dibuat dari nol menggunakan bahasa **C (freestanding)** dan **NASM Assembly** dengan standar **GNU Multiboot v1** untuk memenuhi Tugas Besar Sistem Operasi.
 
 ---
 
@@ -76,16 +76,16 @@ make clean
 
 ---
 
-## Daftar Perintah CLI Shell
+## Daftar Perintah CLI Shell (`dalfon> `)
 
-Saat Mini-OS menyala, Anda akan disambut oleh logo ASCII dan prompt interaktif `mini-os> `. Berikut adalah perintah yang didukung:
+Saat **Dalfon OS** menyala, Anda akan disambut oleh logo ASCII `DALFON OS` dan prompt interaktif `dalfon> `. Berikut adalah perintah yang didukung:
 
 | Perintah | Deskripsi |
 | :--- | :--- |
-| `help` | Menampilkan daftar seluruh perintah yang tersedia di Mini-OS. |
+| `help` | Menampilkan daftar seluruh perintah yang tersedia di Dalfon OS. |
 | `clear` | Membersihkan layar terminal VGA dan mengembalikan kursor ke kiri atas. |
-| `about` | Menampilkan informasi arsitektur dan spesifikasi Mini-OS. |
-| `banner` | Menampilkan kembali logo ASCII art Mini-OS. |
+| `about` | Menampilkan informasi arsitektur dan spesifikasi Dalfon OS. |
+| `banner` | Menampilkan kembali logo ASCII art Dalfon OS. |
 | `echo <teks>` | Mencetak kembali teks argumen ke layar terminal. |
 | `reboot` | Melakukan *warm reboot* sistem melalui kontroler PS/2 (`0x64`). |
 | `halt` | Menghentikan eksekusi CPU (`cli; hlt`). |
