@@ -17,7 +17,6 @@ void shell_execute(const char *input);
 /* Freestanding string utility functions */
 size_t kstrlen(const char *str);
 int kstrcmp(const char *s1, const char *s2);
-int kstrncmp(const char *s1, const char *s2, size_t n);
 
 #endif /* SHELL_H */
 

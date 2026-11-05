@@ -85,8 +85,4 @@ Saat **Dalfon OS** menyala, Anda akan disambut oleh logo ASCII `DALFON OS` dan p
 | `help` | Menampilkan daftar seluruh perintah yang tersedia di Dalfon OS. |
 | `clear` | Membersihkan layar terminal VGA dan mengembalikan kursor ke kiri atas. |
 | `about` | Menampilkan informasi arsitektur dan spesifikasi Dalfon OS. |
-| `banner` | Menampilkan kembali logo ASCII art Dalfon OS. |
-| `echo <teks>` | Mencetak kembali teks argumen ke layar terminal. |
-| `reboot` | Melakukan *warm reboot* sistem melalui kontroler PS/2 (`0x64`). |
-| `halt` | Menghentikan eksekusi CPU (`cli; hlt`). |
 
