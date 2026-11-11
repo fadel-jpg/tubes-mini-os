@@ -61,19 +61,19 @@ void shell_print_banner(void) {
 }
 
 static void cmd_help(void) {
-    vga_print_colored("Available Commands (Dalfon OS v0.4.0):\n", VGA_COLOR_YELLOW, VGA_COLOR_BLACK);
-    vga_print("  help         - Show this help message\n");
-    vga_print("  clear        - Clear the terminal screen\n");
-    vga_print("  about        - Display information about Dalfon OS\n");
-    vga_print("  banner       - Reprint the Dalfon OS ASCII logo\n");
-    vga_print("  echo <text>  - Print text back to the terminal\n");
-    vga_print("  ps           - Show Thread Control Block (TCB) status table\n");
-    vga_print("  thread       - Run Tahap 2 Kernel Thread & State Transition demo\n");
-    vga_print("  sched        - Run Tahap 3 Preemptive Round Robin scheduler demo\n");
-    vga_print("  sync         - Run Tahap 4 race condition vs mutex/semaphore demo\n");
-    vga_print("  uptime       - Show timer ticks (1 tick = 1 ms) since boot (PIT 1000 Hz)\n");
-    vga_print("  reboot       - Reboot the system via PS/2 controller\n");
-    vga_print("  halt         - Halt the CPU\n");
+    vga_print_colored("Daftar Perintah (Dalfon OS v0.4.0):\n", VGA_COLOR_YELLOW, VGA_COLOR_BLACK);
+    vga_print("  help        - Tampilkan pesan bantuan\n");
+    vga_print("  clear       - Bersihkan layar terminal\n");
+    vga_print("  about       - Tampilkan informasi tentang Dalfon OS\n");
+    vga_print("  banner      - Cetak ulang logo ASCII Dalfon OS\n");
+    vga_print("  echo <text> - Cetak teks kembali ke terminal\n");
+    vga_print("  ps          - Tampilkan tabel status Thread Control Block (TCB)\n");
+    vga_print("  thread      - Jalankan demo Tahap 2: kernel thread & perubahan status\n");
+    vga_print("  sched       - Jalankan demo Tahap 3: penjadwal Round Robin preemptive\n");
+    vga_print("  sync        - Jalankan demo Tahap 4: race condition vs mutex/semaphore\n");
+    vga_print("  uptime      - Tampilkan tick timer sejak boot (1 tick = 1 ms, PIT 1000 Hz)\n");
+    vga_print("  reboot      - Mulai ulang sistem lewat kontroler PS/2\n");
+    vga_print("  halt        - Hentikan CPU\n");
 }
 
 static void cmd_about(void) {
