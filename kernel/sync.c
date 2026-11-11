@@ -115,16 +115,19 @@ static semaphore_t       counter_sem;      /* binary semaphore (nilai awal 1) */
 static semaphore_t       done_sem;         /* sinyal selesai dari worker ke shell */
 
 static void worker_unsafe(void) {
+    tcb_t *me = thread_get(thread_current());
     for (uint32_t i = 0; i < RACE_ITER; i++) {
         uint32_t tmp = shared_counter;     /* 1. load  */
         critical_work();
         tmp = tmp + 1;                     /* 2. add   */
         shared_counter = tmp;              /* 3. store */
     }
+    me->step_count = RACE_ITER;
     sem_post(&done_sem);
 }
 
 static void worker_mutex(void) {
+    tcb_t *me = thread_get(thread_current());
     for (uint32_t i = 0; i < RACE_ITER; i++) {
         mutex_lock(&counter_mutex);
         uint32_t tmp = shared_counter;
@@ -133,10 +136,12 @@ static void worker_mutex(void) {
         shared_counter = tmp;
         mutex_unlock(&counter_mutex);
     }
+    me->step_count = RACE_ITER;
     sem_post(&done_sem);
 }
 
 static void worker_sem(void) {
+    tcb_t *me = thread_get(thread_current());
     for (uint32_t i = 0; i < RACE_ITER; i++) {
         sem_wait(&counter_sem);
         uint32_t tmp = shared_counter;
@@ -145,6 +150,7 @@ static void worker_sem(void) {
         shared_counter = tmp;
         sem_post(&counter_sem);
     }
+    me->step_count = RACE_ITER;
     sem_post(&done_sem);
 }
 

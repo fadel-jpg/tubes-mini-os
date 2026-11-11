@@ -12,11 +12,14 @@ mini-os/
 ├── linker.ld               # Linker script untuk memuat kernel di memori fisik 1MB (0x100000)
 ├── setup.sh                # Script bash pengecekan & instalasi otomatis toolchain di Linux/WSL
 ├── boot/
-│   └── boot.asm            # Header Multiboot v1, alokasi stack 16KB, entry point _start & context_switch
+│   └── boot.asm            # Header Multiboot v1, stack 16KB, _start, context_switch, & ISR/IRQ0 stubs
 ├── kernel/
 │   ├── kernel.c            # Fungsi kernel_main(), verifikasi Multiboot, dan inisialisasi sistem
 │   ├── shell.c             # Interactive CLI Shell (parser & handler perintah)
-│   └── thread.c            # Pengelolaan Kernel Thread (TCB, perubahan status, dan demo 2 thread)
+│   ├── thread.c            # Tahap 2: Pengelolaan Kernel Thread (TCB, context switch, 5 status thread)
+│   ├── idt.c               # Tahap 3: GDT, IDT (Exception 0-31 + IRQ0), remap PIC 8259, & PIT 1000 Hz
+│   ├── sched.c             # Tahap 3: Preemptive Round Robin Scheduler berbasis Timer Interrupt (IRQ0)
+│   └── sync.c              # Tahap 4: Sinkronisasi Mutex & Counting/Binary Semaphore (antrean FIFO)
 ├── drivers/
 │   ├── vga.c               # Driver layar VGA Text Mode (80x25 @ 0xB8000, scrolling, kursor, warna)
 │   └── keyboard.c          # Driver input PS/2 Keyboard berbasis polling (Port 0x60 & 0x64)
@@ -24,6 +27,10 @@ mini-os/
 │   ├── vga.h               # Header deklarasi fungsi VGA & port I/O (inb/outb)
 │   ├── keyboard.h          # Header deklarasi fungsi keyboard PS/2
 │   ├── thread.h            # Header struktur data Thread Control Block (TCB) & status thread
+│   ├── idt.h               # Header GDT/IDT & timer frekuensi PIT (1000 Hz)
+│   ├── irq.h               # Header helper critical section interrupt (irq_save, irq_restore, cli, sti)
+│   ├── sched.h             # Header API Preemptive Round Robin Scheduler
+│   ├── sync.h              # Header struktur data waitq_t, mutex_t, dan semaphore_t
 │   └── shell.h             # Header deklarasi fungsi CLI shell & utilitas string
 └── README.md               # Dokumentasi proyek
 ```
@@ -74,16 +81,19 @@ make clean
 
 ## Daftar Perintah CLI Shell (`dalfon> `)
 
-Saat **Dalfon OS** menyala, Anda akan disambut oleh logo ASCII `DALFON OS` dan prompt interaktif `dalfon> `. Berikut adalah perintah yang didukung:
+Saat **Dalfon OS v0.4.0** menyala, Anda akan disambut oleh logo ASCII `DALFON OS` dan prompt interaktif `dalfon> `. Berikut adalah perintah yang didukung:
 
-| Perintah | Deskripsi |
-| :--- | :--- |
-| `help` | Menampilkan daftar seluruh perintah yang tersedia di Dalfon OS. |
-| `clear` | Membersihkan layar terminal VGA dan mengembalikan kursor ke kiri atas. |
-| `about` | Menampilkan informasi arsitektur dan spesifikasi Dalfon OS. |
-| `banner` | Menampilkan kembali logo ASCII art Dalfon OS. |
-| `echo <teks>` | Mencetak kembali teks argumen ke layar terminal. |
-| `ps` | Menampilkan tabel status **Thread Control Block (TCB)** beserta alamat *Stack Pointer* (`ESP`). |
-| `thread` | Menjalankan pengujian **Tahap 2**: membuat 2 kernel thread berbeda (`worker-prime` & `worker-sensor`) dan mendemonstrasikan perubahan status (`NEW` -> `READY` -> `RUNNING` -> `WAITING` -> `TERMINATED`) via *context switch* nyata. |
-| `reboot` | Melakukan *warm reboot* sistem melalui kontroler PS/2 (`0x64`). |
-| `halt` | Menghentikan eksekusi CPU (`cli; hlt`). |
+| Perintah | Tahap | Deskripsi |
+| :--- | :---: | :--- |
+| `help` | Tahap 1 | Menampilkan daftar seluruh perintah yang tersedia di Dalfon OS. |
+| `clear` | Tahap 1 | Membersihkan layar terminal VGA dan mengembalikan kursor ke kiri atas. |
+| `about` | Tahap 1 | Menampilkan informasi arsitektur dan spesifikasi Dalfon OS. |
+| `banner` | Tahap 1 | Menampilkan kembali logo ASCII art Dalfon OS. |
+| `echo <teks>` | Tahap 1 | Mencetak kembali teks argumen ke layar terminal. |
+| `ps` | Tahap 2 | Menampilkan tabel status **Thread Control Block (TCB)** beserta `Step`, `Ticks`, dan `Stack Ptr` (`ESP`). |
+| `thread` | Tahap 2 | Menjalankan pengujian **Tahap 2**: membuat 2 kernel thread berbeda (`worker-prime` & `worker-sensor`) dan mendemonstrasikan 5 status thread (`NEW`, `READY`, `RUNNING`, `WAITING`, `TERMINATED`). |
+| `sched` | Tahap 3 | Menjalankan pengujian **Tahap 3 (Preemptive Round Robin Scheduler)**: 3 worker *CPU-bound* tanpa `yield()` dipaksa bergantian oleh *timer interrupt* PIT IRQ0 (quantum 50 ms). |
+| `sync` | Tahap 4 | Menjalankan pengujian **Tahap 4 (Sinkronisasi)**: membandingkan hasil operasi *shared counter* 2 thread (4.000.000 increment) tanpa sinkronisasi (*race condition*) vs dengan **Mutex** & **Semaphore** (*konsisten*). |
+| `uptime` | Tahap 3 | Menampilkan jumlah *timer ticks* (ms) dan detik sejak sistem *booting*. |
+| `reboot` | Tahap 1 | Melakukan *warm reboot* sistem melalui kontroler PS/2 (`0x64`). |
+| `halt` | Tahap 1 | Menghentikan eksekusi CPU (`cli; hlt`). |

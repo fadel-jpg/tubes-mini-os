@@ -173,6 +173,7 @@ static void sched_worker(void) {
         if (now != last) {
             last = now;
             marks++;
+            me->step_count++;
             uint32_t f = irq_save();
             vga_putchar(mark);
             irq_restore(f);

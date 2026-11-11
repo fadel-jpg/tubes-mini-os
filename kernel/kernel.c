@@ -40,7 +40,7 @@ void kernel_main(uint32_t magic, uint32_t multiboot_info) {
     vga_print_colored("[OK] ", VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK);
     vga_print("Kernel Thread Manager (TCB) initialized.\n");
 
-    /* GDT, IDT, PIC, PIT (timer 100 Hz) lalu aktifkan interrupt */
+    /* GDT, IDT, PIC, PIT (timer 1000 Hz) lalu aktifkan interrupt */
     interrupts_init(TIMER_HZ);
     irq_enable();
     vga_print_colored("[OK] ", VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK);
