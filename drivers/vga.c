@@ -120,3 +120,21 @@ void vga_print_colored(const char *str, vga_color_t fg, vga_color_t bg) {
     terminal_color = old_color;
 }
 
+void vga_print_int(uint32_t num) {
+    if (num == 0) {
+        vga_putchar('0');
+        return;
+    }
+
+    char buf[12];
+    int i = 0;
+    while (num > 0) {
+        buf[i++] = (char)('0' + (num % 10));
+        num /= 10;
+    }
+
+    while (i > 0) {
+        vga_putchar(buf[--i]);
+    }
+}
+

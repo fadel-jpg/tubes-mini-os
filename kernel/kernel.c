@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include "vga.h"
 #include "keyboard.h"
+#include "thread.h"
 #include "shell.h"
 
 #define MULTIBOOT_BOOTLOADER_MAGIC 0x2BADB002
@@ -30,10 +31,14 @@ void kernel_main(uint32_t magic, uint32_t multiboot_info) {
     /* Initialize PS/2 Keyboard polling driver */
     keyboard_init();
     vga_print_colored("[OK] ", VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK);
-    vga_print("PS/2 Keyboard driver initialized.\n\n");
+    vga_print("PS/2 Keyboard driver initialized.\n");
+
+    /* Initialize Kernel Thread Subsystem (TCB Table) */
+    thread_init();
+    vga_print_colored("[OK] ", VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK);
+    vga_print("Kernel Thread Manager (TCB) initialized.\n\n");
 
     /* Display ASCII art banner and launch interactive CLI shell */
     shell_print_banner();
     shell_run();
 }
-

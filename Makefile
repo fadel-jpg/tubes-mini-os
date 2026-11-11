@@ -1,5 +1,5 @@
 # =============================================================================
-# Makefile - Build System for Mini-OS (x86 32-bit Multiboot)
+# Makefile - Build System for Dalfon OS (x86 32-bit Multiboot)
 # =============================================================================
 
 # Toolchain configuration
@@ -27,6 +27,7 @@ KERNEL_ISO := $(BIN_DIR)/mini-os.iso
 OBJS    := $(BUILD_DIR)/boot.o \
            $(BUILD_DIR)/kernel.o \
            $(BUILD_DIR)/shell.o \
+           $(BUILD_DIR)/thread.o \
            $(BUILD_DIR)/vga.o \
            $(BUILD_DIR)/keyboard.o
 
@@ -47,6 +48,10 @@ $(BUILD_DIR)/kernel.o: kernel/kernel.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/shell.o: kernel/shell.c
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/thread.o: kernel/thread.c
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
@@ -71,7 +76,7 @@ run: $(KERNEL_BIN)
 iso: $(KERNEL_BIN)
 	mkdir -p $(ISO_DIR)/boot/grub
 	cp $(KERNEL_BIN) $(ISO_DIR)/boot/kernel.bin
-	printf 'set timeout=0\nset default=0\nmenuentry "Mini-OS" {\n    multiboot /boot/kernel.bin\n    boot\n}\n' > $(ISO_DIR)/boot/grub/grub.cfg
+	printf 'set timeout=0\nset default=0\nmenuentry "Dalfon OS" {\n    multiboot /boot/kernel.bin\n    boot\n}\n' > $(ISO_DIR)/boot/grub/grub.cfg
 	grub-mkrescue -o $(KERNEL_ISO) $(ISO_DIR)
 	@echo "[SUCCESS] Bootable ISO created at: $(KERNEL_ISO)"
 
