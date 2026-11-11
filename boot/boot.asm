@@ -23,7 +23,11 @@ stack_top:
 section .text
 global _start
 global context_switch
+global irq0_stub
+global isr_stub_table
 extern kernel_main
+extern timer_irq_handler
+extern exception_handler
 
 _start:
     ; Set up stack pointer
@@ -76,3 +80,81 @@ context_switch:
 
     ; Lompat ke alamat instruksi (EIP) yang tersimpan di puncak stack thread baru
     ret
+
+; =============================================================================
+; Interrupt stubs (Tahap 3)
+; irq0_stub  : IRQ0 timer PIT -> timer_irq_handler() -> sched_tick() (preemption)
+; isr0..isr31: CPU exception -> exception_handler(regs_t *)
+; Semua register disimpan dengan pushad di stack thread yang sedang berjalan,
+; sehingga context switch di dalam ISR otomatis menyimpan konteks lengkap thread.
+; =============================================================================
+irq0_stub:
+    pushad
+    call timer_irq_handler
+    popad
+    iretd
+
+%macro ISR_NOERR 1
+isr%1:
+    push dword 0            ; error code palsu agar layout stack seragam
+    push dword %1
+    jmp isr_common
+%endmacro
+
+%macro ISR_ERR 1
+isr%1:
+    push dword %1           ; error code sudah di-push oleh CPU
+    jmp isr_common
+%endmacro
+
+isr_common:
+    pushad
+    push esp                ; argumen: regs_t *
+    call exception_handler
+    add esp, 4
+    popad
+    add esp, 8              ; buang int_no + err_code
+    iretd
+
+ISR_NOERR 0
+ISR_NOERR 1
+ISR_NOERR 2
+ISR_NOERR 3
+ISR_NOERR 4
+ISR_NOERR 5
+ISR_NOERR 6
+ISR_NOERR 7
+ISR_ERR   8
+ISR_NOERR 9
+ISR_ERR   10
+ISR_ERR   11
+ISR_ERR   12
+ISR_ERR   13
+ISR_ERR   14
+ISR_NOERR 15
+ISR_NOERR 16
+ISR_ERR   17
+ISR_NOERR 18
+ISR_NOERR 19
+ISR_NOERR 20
+ISR_ERR   21
+ISR_NOERR 22
+ISR_NOERR 23
+ISR_NOERR 24
+ISR_NOERR 25
+ISR_NOERR 26
+ISR_NOERR 27
+ISR_NOERR 28
+ISR_ERR   29
+ISR_ERR   30
+ISR_NOERR 31
+
+section .rodata
+isr_stub_table:
+%assign i 0
+%rep 32
+    dd isr %+ i
+%assign i i+1
+%endrep
+
+section .note.GNU-stack noalloc noexec nowrite progbits

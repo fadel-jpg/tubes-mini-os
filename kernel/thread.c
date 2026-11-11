@@ -8,11 +8,14 @@
 #include "thread.h"
 #include "vga.h"
 #include "shell.h"
+#include "irq.h"
+#include "sched.h"
 
 /* Tabel TCB statis dan ruang stack terpisah untuk masing-masing thread */
 static tcb_t   thread_table[MAX_THREADS];
 static uint8_t thread_stacks[MAX_THREADS][THREAD_STACK_SIZE] __attribute__((aligned(16)));
 static int     current_tid = 0;
+static int     thread_verbose = 1;   /* 0 = senyapkan log pembuatan/transisi status (dipakai demo sinkronisasi) */
 
 /* Menyalin string dengan batas aman */
 static void kstrcpy_safe(char *dst, const char *src, size_t max_len) {
@@ -66,6 +69,9 @@ static void log_state_change(int tid, thread_state_t old_st, thread_state_t new_
 
 /* Wrapper eksekusi awal setiap kernel thread baru */
 static void thread_entry_wrapper(void) {
+    /* Thread baru pertama kali dijalankan dari dalam context switch (IF=0), aktifkan interrupt
+     * agar timer dapat mem-preempt thread ini. */
+    irq_enable();
     int tid = current_tid;
     if (thread_table[tid].entry != NULL) {
         thread_table[tid].entry();
@@ -81,6 +87,8 @@ void thread_init(void) {
         thread_table[i].state      = THREAD_UNUSED;
         thread_table[i].entry      = NULL;
         thread_table[i].step_count = 0;
+        thread_table[i].wait_obj   = NULL;
+        thread_table[i].cpu_ticks  = 0;
     }
 
     /* Slot 0 mewakili Main Kernel / CLI Shell Thread yang sedang aktif */
@@ -120,6 +128,12 @@ int thread_create(const char *name, void (*entry)(void)) {
     thread_table[slot].state      = THREAD_NEW;
     thread_table[slot].entry      = entry;
     thread_table[slot].step_count = 0;
+    thread_table[slot].wait_obj   = NULL;
+    thread_table[slot].cpu_ticks  = 0;
+
+    if (!thread_verbose) {
+        return slot;
+    }
 
     vga_print("  [CREATE] Thread #");
     vga_print_int((uint32_t)slot);
@@ -135,7 +149,7 @@ int thread_create(const char *name, void (*entry)(void)) {
 void thread_ready_all(void) {
     for (int i = 1; i < MAX_THREADS; i++) {
         if (thread_table[i].state == THREAD_NEW) {
-            log_state_change(i, THREAD_NEW, THREAD_READY, "admitted to ready queue");
+            if (thread_verbose) log_state_change(i, THREAD_NEW, THREAD_READY, "admitted to ready queue");
             thread_table[i].state = THREAD_READY;
         }
     }
@@ -144,8 +158,10 @@ void thread_ready_all(void) {
 /* Membangunkan thread yang sedang WAITING menjadi READY */
 void thread_wake_all(void) {
     for (int i = 1; i < MAX_THREADS; i++) {
-        if (thread_table[i].state == THREAD_WAITING) {
-            log_state_change(i, THREAD_WAITING, THREAD_READY, "I/O or event completed");
+        /* Hanya bangunkan thread yang menunggu event I/O simulasi; thread yang diblokir
+         * mutex/semaphore (wait_obj != NULL) hanya boleh dibangunkan oleh unlock/post. */
+        if (thread_table[i].state == THREAD_WAITING && thread_table[i].wait_obj == NULL) {
+            if (thread_verbose) log_state_change(i, THREAD_WAITING, THREAD_READY, "I/O or event completed");
             thread_table[i].state = THREAD_READY;
         }
     }
@@ -153,13 +169,16 @@ void thread_wake_all(void) {
 
 /* Memilih thread READY berikutnya secara giliran (Round-Robin) dan melakukan Context Switch */
 static void schedule_next(thread_state_t prev_next_state, const char *reason) {
+    uint32_t irq_flags = irq_save();   /* pemilihan thread + perubahan status harus atomik */
     int prev_tid = current_tid;
     int next_tid = -1;
+    /* Saat preemptive scheduler aktif, kernel-shell (TID 0) ikut dalam antrean Round Robin. */
+    int shell_eligible = sched_preempt_active();
 
-    /* Cari thread worker (1..MAX_THREADS-1) yang berstatus READY */
+    /* Cari thread yang berstatus READY */
     for (int offset = 1; offset < MAX_THREADS; offset++) {
         int candidate = (prev_tid + offset) % MAX_THREADS;
-        if (candidate != 0 && thread_table[candidate].state == THREAD_READY) {
+        if ((candidate != 0 || shell_eligible) && thread_table[candidate].state == THREAD_READY) {
             next_tid = candidate;
             break;
         }
@@ -183,24 +202,60 @@ static void schedule_next(thread_state_t prev_next_state, const char *reason) {
     }
 
     if (next_tid == prev_tid) {
+        irq_restore(irq_flags);
         return;
     }
 
     /* Ubah status thread lama */
     thread_state_t old_state = thread_table[prev_tid].state;
     thread_table[prev_tid].state = prev_next_state;
-    if (prev_tid != 0) {
+    if (prev_tid != 0 && thread_verbose) {
         log_state_change(prev_tid, old_state, prev_next_state, reason);
     }
 
     /* Ubah status thread baru menjadi RUNNING */
     thread_state_t next_old_state = thread_table[next_tid].state;
     thread_table[next_tid].state = THREAD_RUNNING;
-    if (next_tid != 0) {
+    if (next_tid != 0 && thread_verbose) {
         log_state_change(next_tid, next_old_state, THREAD_RUNNING, "context switch CPU");
     }
 
     current_tid = next_tid;
+    sched_note_switch();
+    context_switch(&thread_table[prev_tid].esp, thread_table[next_tid].esp);
+    irq_restore(irq_flags);            /* kembali ke sini saat thread ini dijadwalkan lagi */
+}
+
+/* --- API tambahan untuk scheduler preemptive & sinkronisasi (Tahap 3 & 4) --- */
+
+tcb_t *thread_get(int tid) {
+    return &thread_table[tid];
+}
+
+int thread_current(void) {
+    return current_tid;
+}
+
+void thread_set_verbose(int on) {
+    thread_verbose = on;
+}
+
+void thread_set_state(int tid, thread_state_t st, const char *reason, int log) {
+    if (log) {
+        log_state_change(tid, thread_table[tid].state, st, reason);
+    }
+    thread_table[tid].state = st;
+}
+
+void thread_switch_to(int next_tid, thread_state_t prev_state) {
+    int prev_tid = current_tid;
+    if (next_tid == prev_tid) {
+        return;
+    }
+    thread_table[prev_tid].state = prev_state;
+    thread_table[next_tid].state = THREAD_RUNNING;
+    current_tid = next_tid;
+    sched_note_switch();
     context_switch(&thread_table[prev_tid].esp, thread_table[next_tid].esp);
 }
 
@@ -221,9 +276,9 @@ void thread_exit(void) {
 }
 
 void thread_print_table(void) {
-    vga_print_colored("----------------------------------------------------------------\n", VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
-    vga_print_colored(" TID | Nama Thread        | Status       | Step | Stack Ptr\n", VGA_COLOR_YELLOW, VGA_COLOR_BLACK);
-    vga_print_colored("----------------------------------------------------------------\n", VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
+    vga_print_colored("----------------------------------------------------------------------\n", VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
+    vga_print_colored(" TID | Nama Thread        | Status       | Step | Ticks | Stack Ptr\n", VGA_COLOR_YELLOW, VGA_COLOR_BLACK);
+    vga_print_colored("----------------------------------------------------------------------\n", VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
 
     for (int i = 0; i < MAX_THREADS; i++) {
         if (thread_table[i].state == THREAD_UNUSED) {
@@ -253,7 +308,15 @@ void thread_print_table(void) {
         }
         vga_print(" |  ");
         vga_print_int(thread_table[i].step_count);
-        vga_print("   | 0x");
+        vga_print("   | ");
+        vga_print_int(thread_table[i].cpu_ticks);
+        {
+            uint32_t v = thread_table[i].cpu_ticks;
+            int digits = 1;
+            while (v >= 10) { v /= 10; digits++; }
+            while (digits < 5) { vga_putchar(' '); digits++; }
+        }
+        vga_print(" | 0x");
 
         /* Cetak alamat ESP dalam heksadesimal singkat */
         uint32_t esp_val = (uint32_t)thread_table[i].esp;
@@ -263,7 +326,7 @@ void thread_print_table(void) {
         }
         vga_putchar('\n');
     }
-    vga_print_colored("----------------------------------------------------------------\n", VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
+    vga_print_colored("----------------------------------------------------------------------\n", VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
 }
 
 /* =============================================================================

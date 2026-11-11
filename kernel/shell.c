@@ -7,6 +7,8 @@
 #include "vga.h"
 #include "keyboard.h"
 #include "thread.h"
+#include "sched.h"
+#include "sync.h"
 
 /* Freestanding string helper functions */
 size_t kstrlen(const char *str) {
@@ -51,7 +53,7 @@ void shell_print_banner(void) {
     vga_print_colored(" |  _ \\  / \\  | |   |  ___/ _ \\| \\ | |  / _ \\/ ___| \n", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
     vga_print_colored(" | | | |/ _ \\ | |   | |_ | | | |  \\| | | | | \\___ \\ \n", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
     vga_print_colored(" | |_| / ___ \\| |___|  _|| |_| | |\\  | | |_| |___) |\n", VGA_COLOR_LIGHT_BLUE, VGA_COLOR_BLACK);
-    vga_print_colored(" |____/_/   \\_\\_____|_|   \\___/|_| \\_|  \\___/|____/   v0.2.0 (x86 32-bit)\n", VGA_COLOR_LIGHT_BLUE, VGA_COLOR_BLACK);
+    vga_print_colored(" |____/_/   \\_\\_____|_|   \\___/|_| \\_|  \\___/|____/   v0.4.0 (x86 32-bit)\n", VGA_COLOR_LIGHT_BLUE, VGA_COLOR_BLACK);
     vga_print_colored("================================================================================\n", VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
     vga_print_colored("Welcome to Dalfon OS! Type ", VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
     vga_print_colored("'help'", VGA_COLOR_YELLOW, VGA_COLOR_BLACK);
@@ -59,7 +61,7 @@ void shell_print_banner(void) {
 }
 
 static void cmd_help(void) {
-    vga_print_colored("Available Commands (Dalfon OS v0.2.0):\n", VGA_COLOR_YELLOW, VGA_COLOR_BLACK);
+    vga_print_colored("Available Commands (Dalfon OS v0.4.0):\n", VGA_COLOR_YELLOW, VGA_COLOR_BLACK);
     vga_print("  help         - Show this help message\n");
     vga_print("  clear        - Clear the terminal screen\n");
     vga_print("  about        - Display information about Dalfon OS\n");
@@ -67,18 +69,23 @@ static void cmd_help(void) {
     vga_print("  echo <text>  - Print text back to the terminal\n");
     vga_print("  ps           - Show Thread Control Block (TCB) status table\n");
     vga_print("  thread       - Run Tahap 2 Kernel Thread & State Transition demo\n");
+    vga_print("  sched        - Run Tahap 3 Preemptive Round Robin scheduler demo\n");
+    vga_print("  sync         - Run Tahap 4 race condition vs mutex/semaphore demo\n");
+    vga_print("  uptime       - Show timer ticks (1 tick = 1 ms) since boot (PIT 1000 Hz)\n");
     vga_print("  reboot       - Reboot the system via PS/2 controller\n");
     vga_print("  halt         - Halt the CPU\n");
 }
 
 static void cmd_about(void) {
-    vga_print_colored("Dalfon OS Kernel v0.2.0\n", VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK);
+    vga_print_colored("Dalfon OS Kernel v0.4.0\n", VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK);
     vga_print("  OS Name      : Dalfon OS (Mini-OS Project)\n");
     vga_print("  Architecture : x86 32-bit (i686) Protected Mode\n");
     vga_print("  Boot Standard: GNU Multiboot v1 (0x1BADB002)\n");
     vga_print("  Display      : VGA Text Mode 80x25 @ 0xB8000\n");
     vga_print("  Input Driver : PS/2 Keyboard Polling (Port 0x60/0x64)\n");
     vga_print("  Thread Mgmt  : TCB Table + ASM Context Switch (New/Ready/Running/Waiting/Terminated)\n");
+    vga_print("  Scheduler    : Preemptive Round Robin, PIT IRQ0 1000 Hz, quantum 50 ms\n");
+    vga_print("  Sinkronisasi : Mutex & Semaphore blocking (antrean FIFO, status WAITING)\n");
 }
 
 static void cmd_reboot(void) {
@@ -116,6 +123,16 @@ void shell_execute(const char *input) {
         thread_print_table();
     } else if (kstrcmp(cmd, "thread") == 0) {
         thread_run_demo();
+    } else if (kstrcmp(cmd, "sched") == 0) {
+        sched_run_demo();
+    } else if (kstrcmp(cmd, "sync") == 0) {
+        sync_run_demo();
+    } else if (kstrcmp(cmd, "uptime") == 0) {
+        vga_print("Uptime: ");
+        vga_print_int(sched_ticks());
+        vga_print(" ticks (");
+        vga_print_int(sched_ticks() / 1000);
+        vga_print(" detik)\n");
     } else if (kstrcmp(cmd, "reboot") == 0) {
         cmd_reboot();
     } else if (kstrcmp(cmd, "halt") == 0) {

@@ -28,6 +28,9 @@ OBJS    := $(BUILD_DIR)/boot.o \
            $(BUILD_DIR)/kernel.o \
            $(BUILD_DIR)/shell.o \
            $(BUILD_DIR)/thread.o \
+           $(BUILD_DIR)/idt.o \
+           $(BUILD_DIR)/sched.o \
+           $(BUILD_DIR)/sync.o \
            $(BUILD_DIR)/vga.o \
            $(BUILD_DIR)/keyboard.o
 
@@ -52,6 +55,18 @@ $(BUILD_DIR)/shell.o: kernel/shell.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/thread.o: kernel/thread.c
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/idt.o: kernel/idt.c
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/sched.o: kernel/sched.c
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/sync.o: kernel/sync.c
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
