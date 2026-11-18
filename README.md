@@ -112,34 +112,25 @@ Saat **Dalfon OS v0.4.0** menyala, Anda akan disambut oleh logo ASCII `DALFON OS
 | `uptime` | Tahap 3 | Menampilkan jumlah *timer ticks* (ms) dan detik sejak sistem *booting*. |
 | `reboot` | Tahap 1 | Melakukan *warm reboot* sistem melalui kontroler PS/2 (`0x64`). |
 | `halt` | Tahap 1 | Menghentikan eksekusi CPU (`cli; hlt`). |
+| `ls` | Tahap 7 | Menampilkan daftar berkas di **RAMDisk**: izin, pemilik, ukuran, dan nama. |
+| `touch <n>` | Tahap 7 | Membuat berkas kosong bernama `<n>` (nama ≤ 23 karakter: huruf, angka, `.`, `_`, `-`). |
+| `write <n> <teks>` | Tahap 7 | Menulis atau **menimpa** isi berkas (`\n` = baris baru). Isi lama tetap aman bila penulisan gagal. |
+| `append <n> <teks>` | Tahap 7 | **Menambah** teks di akhir berkas tanpa menghapus isi lama. |
+| `cat <n>` | Tahap 7 | Menampilkan isi berkas. |
+| `rm <n>` | Tahap 7 | Menghapus berkas dan mengembalikan memorinya ke heap (`kfree`). |
+| `stat <n>` | Tahap 7 | Menampilkan ukuran, pemilik, dan izin satu berkas. |
+| `chmod <ooo> <n>` | Tahap 7 & 8 | Mengubah **izin** berkas dengan 3 digit oktal, mis. `644` (4 = baca, 2 = tulis; digit pertama pemilik, ketiga pengguna lain). Hanya pemilik atau root. |
+| `chown <user> <n>` | Tahap 7 & 8 | Mengganti **pemilik** berkas. Hanya root. |
+| `df` | Tahap 7 | Menampilkan pemakaian RAMDisk (jumlah berkas, byte data) dan heap kernel. |
+| `fstest` | Tahap 7 | Menjalankan pengujian **Tahap 7 (VFS)**: CRUD, batas ukuran 4096 byte (`EFBIG`), nama tidak valid, isi lama aman saat gagal tulis, dan **tanpa kebocoran heap**. |
+| `whoami` | Tahap 8 | Menampilkan **user yang sedang aktif** (nama dan uid). |
+| `su [user]` | Tahap 8 | Berpindah user. Root pindah **tanpa password**; user biasa wajib password (tampil `*`). Tanpa argumen = ke `root`. |
+| `users` | Tahap 8 | Menampilkan daftar akun (`root`, `budi`, `ani`); user aktif ditandai `<- aktif`. |
+| `sectest` | Tahap 8 | Menjalankan pengujian **Tahap 8 (Proteksi)**: matriks izin root/budi/ani, aturan `chmod`/`chown`, dan login benar/salah. |
 
-### Tahap 7 — Sistem Berkas (VFS RAMDisk)
-
-Berkas teks disimpan di RAM (hilang saat reboot). Maksimal 32 berkas, nama ≤ 23 karakter, isi ≤ 4096 byte. `<n>` = nama berkas.
-
-| Perintah | Deskripsi |
-| :--- | :--- |
-| `ls` | Daftar berkas: izin, pemilik, ukuran, nama. |
-| `touch <n>` | Membuat berkas kosong. |
-| `write <n> <teks>` | Menulis/menimpa isi berkas (`\n` = baris baru). |
-| `append <n> <teks>` | Menambah teks di akhir berkas tanpa menghapus isi lama. |
-| `cat <n>` | Menampilkan isi berkas. |
-| `rm <n>` | Menghapus berkas. |
-| `stat <n>` | Menampilkan ukuran, pemilik, dan izin satu berkas. |
-| `chmod <ooo> <n>` | Mengubah izin berkas (3 digit oktal, mis. `644`). |
-| `chown <user> <n>` | Mengganti pemilik berkas (hanya root). |
-| `df` | Pemakaian RAMDisk (jumlah berkas, byte) dan heap. |
-| `fstest` | Uji otomatis VFS: CRUD, batas ukuran, isi lama aman saat gagal tulis, tanpa kebocoran heap. |
-
-### Tahap 8 — Proteksi (Hak Akses Sederhana)
-
-Akun tetap di `kernel/security.c`: `root` (uid 0), `budi` (1000), `ani` (1001). Password disimpan sebagai hash djb2. OS boot sebagai root.
-
-| Perintah | Deskripsi |
-| :--- | :--- |
-| `whoami` | Menampilkan user yang sedang aktif. |
-| `su [user]` | Pindah user. Root pindah tanpa password; user biasa wajib password (tampil `*`). |
-| `users` | Daftar akun; user aktif ditandai `<- aktif`. |
-| `sectest` | Uji otomatis aturan izin, `chmod`/`chown`, dan login benar/salah. |
-
-Aturan izin: mode oktal ala UNIX (digit 1 = pemilik, digit 3 = lainnya; 4 = baca, 2 = tulis). Root melewati semua pemeriksaan. Hapus/`chmod` hanya oleh pemilik atau root; `chown`, `reboot`, `halt` hanya root. Detail desain dan urutan demo ada di `docs/Tahap7-8.md`.
+**Catatan Tahap 7 & 8**
+- **RAMDisk:** maksimal 32 berkas, isi ≤ 4096 byte, disimpan di heap `kmalloc`; data hilang saat reboot. `<n>` = nama berkas.
+- **Akun:** tetap di `kernel/security.c` — `root` (uid 0), `budi` (1000), `ani` (1001); password disimpan sebagai hash djb2 (bukan teks). OS boot sebagai root.
+- **Aturan izin:** root melewati semua pemeriksaan. Hapus dan `chmod` hanya oleh pemilik atau root; `chown`, `reboot`, dan `halt` hanya root.
+- **Prompt:** `root@dalfon# ` untuk root, `user@dalfon$ ` untuk user biasa.
+- Detail desain dan urutan demo ada di `docs/Tahap7-8.md`.
