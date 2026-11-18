@@ -19,7 +19,9 @@ mini-os/
 │   ├── thread.c            # Tahap 2: Pengelolaan Kernel Thread (TCB, context switch, 5 status thread)
 │   ├── idt.c               # Tahap 3: GDT, IDT (Exception 0-31 + IRQ0), remap PIC 8259, & PIT 1000 Hz
 │   ├── sched.c             # Tahap 3: Preemptive Round Robin Scheduler berbasis Timer Interrupt (IRQ0)
-│   └── sync.c              # Tahap 4: Sinkronisasi Mutex & Counting/Binary Semaphore (antrean FIFO)
+│   ├── sync.c              # Tahap 4: Sinkronisasi Mutex & Counting/Binary Semaphore (antrean FIFO)
+│   ├── deadlock.c          # Tahap 5: Demo deadlock (mutex berlawanan), deteksi wait-for graph, & pencegahan lock ordering
+│   └── memory.c            # Tahap 6: Alokator memori dinamis (kmalloc/kfree, first-fit, split & coalesce, aman saat OOM)
 ├── drivers/
 │   ├── vga.c               # Driver layar VGA Text Mode (80x25 @ 0xB8000, scrolling, kursor, warna)
 │   └── keyboard.c          # Driver input PS/2 Keyboard berbasis polling (Port 0x60 & 0x64)
@@ -94,6 +96,9 @@ Saat **Dalfon OS v0.4.0** menyala, Anda akan disambut oleh logo ASCII `DALFON OS
 | `thread` | Tahap 2 | Menjalankan pengujian **Tahap 2**: membuat 2 kernel thread berbeda (`worker-prime` & `worker-sensor`) dan mendemonstrasikan 5 status thread (`NEW`, `READY`, `RUNNING`, `WAITING`, `TERMINATED`). |
 | `sched` | Tahap 3 | Menjalankan pengujian **Tahap 3 (Preemptive Round Robin Scheduler)**: 3 worker *CPU-bound* tanpa `yield()` dipaksa bergantian oleh *timer interrupt* PIT IRQ0 (quantum 50 ms). |
 | `sync` | Tahap 4 | Menjalankan pengujian **Tahap 4 (Sinkronisasi)**: membandingkan hasil operasi *shared counter* 2 thread (4.000.000 increment) tanpa sinkronisasi (*race condition*) vs dengan **Mutex** & **Semaphore** (*konsisten*). |
+| `deadlock` | Tahap 5 | Menjalankan pengujian **Tahap 5 (Deadlock)**: 2 thread memakai 2 mutex dengan urutan berlawanan hingga *deadlock*, mendeteksinya lewat *wait-for graph*, lalu membuktikan **lock ordering** mencegahnya. |
+| `meminfo` | Tahap 6 | Menampilkan kondisi heap kernel: rentang alamat, memori **terpakai** dan **tersedia**, jumlah blok, dan statistik alokasi. |
+| `memtest` | Tahap 6 | Menjalankan pengujian **Tahap 6 (Alokator Memori)**: `kmalloc`/`kfree`, perubahan memori terpakai/tersedia, *coalescing*, penanganan **Out of Memory** tanpa crash, dan penolakan `kfree` tidak valid. |
 | `uptime` | Tahap 3 | Menampilkan jumlah *timer ticks* (ms) dan detik sejak sistem *booting*. |
 | `reboot` | Tahap 1 | Melakukan *warm reboot* sistem melalui kontroler PS/2 (`0x64`). |
 | `halt` | Tahap 1 | Menghentikan eksekusi CPU (`cli; hlt`). |

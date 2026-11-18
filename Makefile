@@ -31,6 +31,8 @@ OBJS    := $(BUILD_DIR)/boot.o \
            $(BUILD_DIR)/idt.o \
            $(BUILD_DIR)/sched.o \
            $(BUILD_DIR)/sync.o \
+           $(BUILD_DIR)/deadlock.o \
+           $(BUILD_DIR)/memory.o \
            $(BUILD_DIR)/vga.o \
            $(BUILD_DIR)/keyboard.o
 
@@ -67,6 +69,14 @@ $(BUILD_DIR)/sched.o: kernel/sched.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/sync.o: kernel/sync.c
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/deadlock.o: kernel/deadlock.c
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/memory.o: kernel/memory.c
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 

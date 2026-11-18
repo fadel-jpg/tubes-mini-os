@@ -9,6 +9,8 @@
 #include "thread.h"
 #include "sched.h"
 #include "sync.h"
+#include "deadlock.h"
+#include "memory.h"
 
 /* Freestanding string helper functions */
 size_t kstrlen(const char *str) {
@@ -71,6 +73,9 @@ static void cmd_help(void) {
     vga_print("  thread      - Jalankan demo Tahap 2: kernel thread & perubahan status\n");
     vga_print("  sched       - Jalankan demo Tahap 3: penjadwal Round Robin preemptive\n");
     vga_print("  sync        - Jalankan demo Tahap 4: race condition vs mutex/semaphore\n");
+    vga_print("  deadlock    - Jalankan demo Tahap 5: deteksi & pencegahan deadlock\n");
+    vga_print("  meminfo     - Tampilkan memori heap terpakai & tersedia (Tahap 6)\n");
+    vga_print("  memtest     - Jalankan demo Tahap 6: kmalloc/kfree, coalescing, OOM\n");
     vga_print("  uptime      - Tampilkan tick timer sejak boot (1 tick = 1 ms, PIT 1000 Hz)\n");
     vga_print("  reboot      - Mulai ulang sistem lewat kontroler PS/2\n");
     vga_print("  halt        - Hentikan CPU\n");
@@ -87,6 +92,8 @@ static void cmd_about(void) {
     vga_print("  Thread Mgmt  : TCB Table + ASM Context Switch (New/Ready/Running/Waiting/Terminated)\n");
     vga_print("  Scheduler    : Preemptive Round Robin, PIT IRQ0 1000 Hz, quantum 50 ms\n");
     vga_print("  Sinkronisasi : Mutex & Semaphore blocking (antrean FIFO, status WAITING)\n");
+    vga_print("  Deadlock     : Deteksi siklus (wait-for graph) + pencegahan lock ordering\n");
+    vga_print("  Memori       : Heap 256 KB first-fit (split & coalesce), aman saat OOM\n");
 }
 
 static void cmd_reboot(void) {
@@ -128,6 +135,12 @@ void shell_execute(const char *input) {
         sched_run_demo();
     } else if (kstrcmp(cmd, "sync") == 0) {
         sync_run_demo();
+    } else if (kstrcmp(cmd, "deadlock") == 0) {
+        deadlock_run_demo();
+    } else if (kstrcmp(cmd, "meminfo") == 0) {
+        mem_print_info();
+    } else if (kstrcmp(cmd, "memtest") == 0) {
+        mem_run_demo();
     } else if (kstrcmp(cmd, "uptime") == 0) {
         vga_print("Uptime: ");
         vga_print_int(sched_ticks());

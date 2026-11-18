@@ -9,6 +9,7 @@
 #include "shell.h"
 #include "idt.h"
 #include "irq.h"
+#include "memory.h"
 
 #define MULTIBOOT_BOOTLOADER_MAGIC 0x2BADB002
 
@@ -39,6 +40,11 @@ void kernel_main(uint32_t magic, uint32_t multiboot_info) {
     thread_init();
     vga_print_colored("[OK] ", VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK);
     vga_print("Kernel Thread Manager (TCB) initialized.\n");
+
+    /* Inisialisasi Alokator Memori Dinamis (heap kernel) */
+    mem_init();
+    vga_print_colored("[OK] ", VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK);
+    vga_print("Kernel heap allocator initialized (256 KB, kmalloc/kfree).\n");
 
     /* GDT, IDT, PIC, PIT (timer 1000 Hz) lalu aktifkan interrupt */
     interrupts_init(TIMER_HZ);
