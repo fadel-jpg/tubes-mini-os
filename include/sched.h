@@ -12,6 +12,7 @@ typedef struct {
 /* Dipanggil dari ISR timer (IRQ0) setiap 1 tick */
 void     sched_tick(void);
 void     sched_note_switch(void);
+void     sched_trace_event(int prev, int next, const char *why);
 int      sched_preempt_active(void);
 
 /* Kendali scheduler preemptive Round Robin */

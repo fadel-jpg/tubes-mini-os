@@ -58,6 +58,8 @@ void vga_print(const char *str);
 void vga_print_colored(const char *str, vga_color_t fg, vga_color_t bg);
 void vga_print_int(uint32_t num);
 void vga_update_cursor(size_t x, size_t y);
+void vga_scroll_view(int delta);
+void vga_scroll_reset(void);
 
 #endif /* VGA_H */
 

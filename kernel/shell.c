@@ -74,6 +74,7 @@ static void cmd_help(void) {
     vga_print("  uptime      - Tampilkan tick timer sejak boot (1 tick = 1 ms, PIT 1000 Hz)\n");
     vga_print("  reboot      - Mulai ulang sistem lewat kontroler PS/2\n");
     vga_print("  halt        - Hentikan CPU\n");
+    vga_print_colored("  [Navigasi]  - PgUp/PgDn atau Panah Atas/Bawah untuk scroll layar\n", VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
 }
 
 static void cmd_about(void) {

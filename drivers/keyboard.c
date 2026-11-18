@@ -7,6 +7,7 @@
 
 static int shift_pressed = 0;
 static int caps_lock = 0;
+static int extended_key = 0;
 
 /* US QWERTY Scancode Set 1 - Normal (Unshifted) */
 static const char scancode_normal[128] = {
@@ -49,6 +50,7 @@ static const char scancode_shift[128] = {
 void keyboard_init(void) {
     shift_pressed = 0;
     caps_lock = 0;
+    extended_key = 0;
 
     /* Flush any pending bytes in the PS/2 controller output buffer */
     while (inb(KB_STATUS_PORT) & 0x01) {
@@ -65,11 +67,33 @@ char keyboard_getchar(void) {
 
         uint8_t scancode = inb(KB_DATA_PORT);
 
+        /* Extended scancode prefix (Arrow keys, Page Up/Down, etc.) */
+        if (scancode == 0xE0) {
+            extended_key = 1;
+            continue;
+        }
+
         /* Key release event (top bit set) */
         if (scancode & 0x80) {
             uint8_t released = scancode & 0x7F;
+            extended_key = 0;
             if (released == 0x2A || released == 0x36) { /* Left or Right Shift */
                 shift_pressed = 0;
+            }
+            continue;
+        }
+
+        /* Handle extended navigation keys for VGA scrollback */
+        if (extended_key) {
+            extended_key = 0;
+            if (scancode == 0x49) {        /* Page Up */
+                vga_scroll_view(10);
+            } else if (scancode == 0x51) { /* Page Down */
+                vga_scroll_view(-10);
+            } else if (scancode == 0x48) { /* Arrow Up */
+                vga_scroll_view(1);
+            } else if (scancode == 0x50) { /* Arrow Down */
+                vga_scroll_view(-1);
             }
             continue;
         }

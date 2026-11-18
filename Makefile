@@ -83,9 +83,9 @@ $(KERNEL_BIN): $(OBJS) linker.ld
 	$(LD) $(LDFLAGS) -o $@ $(OBJS)
 	@echo "[SUCCESS] Kernel binary built at: $(KERNEL_BIN)"
 
-# Run directly in QEMU using -kernel (Multiboot direct boot)
+# Run directly in QEMU using -kernel (Multiboot direct boot, zoom-to-fit agar font mudah dibaca saat maximize/fullscreen)
 run: $(KERNEL_BIN)
-	$(QEMU) -kernel $(KERNEL_BIN)
+	$(QEMU) -kernel $(KERNEL_BIN) -display gtk,zoom-to-fit=on
 
 # Optional: Create a bootable GRUB ISO image (requires grub-mkrescue & xorriso)
 iso: $(KERNEL_BIN)
@@ -97,7 +97,7 @@ iso: $(KERNEL_BIN)
 
 # Run bootable ISO in QEMU
 run-iso: iso
-	$(QEMU) -cdrom $(KERNEL_ISO)
+	$(QEMU) -cdrom $(KERNEL_ISO) -display gtk,zoom-to-fit=on
 
 # Clean all build artifacts
 clean:

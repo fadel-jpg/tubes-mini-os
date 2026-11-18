@@ -220,6 +220,10 @@ static void schedule_next(thread_state_t prev_next_state, const char *reason) {
         log_state_change(next_tid, next_old_state, THREAD_RUNNING, "context switch CPU");
     }
 
+    if (sched_preempt_active()) {
+        sched_trace_event(prev_tid, next_tid, reason);
+    }
+
     current_tid = next_tid;
     sched_note_switch();
     context_switch(&thread_table[prev_tid].esp, thread_table[next_tid].esp);

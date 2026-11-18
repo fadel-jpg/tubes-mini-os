@@ -20,6 +20,7 @@
 #define DEFAULT_QUANTUM 50
 
 static volatile uint32_t ticks = 0;
+static volatile uint32_t trace_base_ticks = 0;
 static volatile int      preempt_enabled = 0;
 static volatile int      trace_enabled = 0;
 static volatile uint32_t quantum = DEFAULT_QUANTUM;
@@ -63,8 +64,9 @@ static int pick_next_ready(int cur) {
 }
 
 static void trace_switch(int prev, int next, const char *why) {
-    vga_print_colored("\n[t=", VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
-    vga_print_int(ticks);
+    uint32_t rel = ticks - trace_base_ticks;
+    vga_print_colored("\n[+", VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
+    vga_print_int(rel);
     vga_print_colored("ms] ", VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
     vga_print("#");
     vga_print_int((uint32_t)prev);
@@ -78,6 +80,12 @@ static void trace_switch(int prev, int next, const char *why) {
     vga_print(" (");
     vga_print(why);
     vga_print("): ");
+}
+
+void sched_trace_event(int prev, int next, const char *why) {
+    if (trace_enabled) {
+        trace_switch(prev, next, why);
+    }
 }
 
 /* === Handler timer (berjalan di dalam ISR, IF=0, EOI sudah dikirim) === */
@@ -110,6 +118,7 @@ void sched_start(uint32_t quantum_ticks, int trace) {
     uint32_t f = irq_save();
     quantum = quantum_ticks;
     slice_left = (int32_t)quantum_ticks;
+    trace_base_ticks = ticks;
     trace_enabled = trace;
     preempt_enabled = 1;
     irq_restore(f);
@@ -151,26 +160,33 @@ void sched_wake(int tid, const char *reason) {
 
 /* =============================================================================
  * Demo Tahap 3: 3 worker CPU-bound yang TIDAK pernah memanggil yield().
- * Setiap tick CPU yang diterima worker dicetak sebagai satu huruf (A/B/C). Pola
- * AAAAA BBBBB CCCCC membuktikan giliran CPU diatur oleh timer interrupt.
+ * Sesuai evaluasi asistensi: kebutuhan waktu (burst time) dibuat berbeda:
+ *   worker-A =  50 ms ( 5 huruf -> 1 quantum, langsung selesai)
+ *   worker-B = 100 ms (10 huruf -> 2 quantum, selesai di putaran ke-2)
+ *   worker-C = 150 ms (15 huruf -> 3 quantum, selesai paling akhir)
+ * Setiap 10 ms CPU worker dicetak 1 huruf (A/B/C) sehingga efek Round Robin
+ * terlihat jelas: A(50ms selesai) -> B(50ms) -> C(50ms) -> B(50ms selesai) -> C(50ms) -> C(50ms selesai).
  * ============================================================================= */
 
 #define DEMO_WORKERS 3
 #define MARK_TICKS   10     /* 1 huruf dicetak tiap 10 tick (10 ms) CPU milik worker */
-#define DEMO_MARKS   15     /* tiap worker mencetak 15 huruf = 150 ms CPU = 3 quantum */
 
+static const int demo_targets[DEMO_WORKERS] = { 5, 10, 15 };
 static semaphore_t demo_done;
+static volatile int workers_remaining = 0;
 
 static void sched_worker(void) {
     int tid = thread_current();
     tcb_t *me = thread_get(tid);
-    char mark = (char)('A' + (tid - 1));
-    uint32_t last = me->cpu_ticks / MARK_TICKS;
+    int idx = (me->name[7] >= 'A' && me->name[7] <= 'C') ? (me->name[7] - 'A') : 0;
+    char mark = (char)('A' + idx);
+    int target_marks = demo_targets[idx];
+    uint32_t last = 0;
     int marks = 0;
 
-    while (marks < DEMO_MARKS) {            /* busy loop murni, tanpa yield/wait */
-        uint32_t now = me->cpu_ticks / MARK_TICKS;
-        if (now != last) {
+    while (marks < target_marks) {          /* busy loop murni, tanpa yield/wait */
+        uint32_t now = (me->cpu_ticks + 1) / MARK_TICKS;
+        if (now > last) {
             last = now;
             marks++;
             me->step_count++;
@@ -180,17 +196,23 @@ static void sched_worker(void) {
         }
     }
     uint32_t f = irq_save();
-    vga_putchar('\n');
+    vga_print(" [selesai ");
+    vga_print_int((uint32_t)(target_marks * MARK_TICKS));
+    vga_print("ms]");
+    if (--workers_remaining == 0) {
+        vga_putchar('\n');
+        sem_post(&demo_done);
+    }
     irq_restore(f);
-    sem_post(&demo_done);
 }
 
 void sched_run_demo(void) {
     vga_print_colored("=== [DEMO TAHAP 3] Preemptive Round Robin Scheduler ===\n", VGA_COLOR_YELLOW, VGA_COLOR_BLACK);
-    vga_print("PIT 1000 Hz, quantum 50 ms, worker tanpa yield(); 1 huruf = 10 ms CPU worker.");
+    vga_print("PIT 1000 Hz, quantum 50 ms | Burst: A=50ms, B=100ms, C=150ms (1 huruf=10ms).");
     thread_set_verbose(0);
 
     sem_init(&demo_done, 0, "demo_done");
+    workers_remaining = DEMO_WORKERS;
     sched_stats_reset();
 
     static const char *names[DEMO_WORKERS] = { "worker-A", "worker-B", "worker-C" };
@@ -201,9 +223,7 @@ void sched_run_demo(void) {
 
     uint32_t t0 = ticks;
     sched_start(DEFAULT_QUANTUM, 1);
-    for (int i = 0; i < DEMO_WORKERS; i++) {
-        sem_wait(&demo_done);               /* shell WAITING sampai semua worker selesai */
-    }
+    sem_wait(&demo_done);                   /* shell WAITING sampai worker terakhir selesai */
     sched_stop();
     thread_set_verbose(1);
 
