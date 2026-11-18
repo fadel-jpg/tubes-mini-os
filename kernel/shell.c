@@ -11,6 +11,7 @@
 #include "sync.h"
 #include "deadlock.h"
 #include "memory.h"
+#include "fscmd.h"      /* Tahap 7 (VFS) & Tahap 8 (proteksi) */
 
 /* Freestanding string helper functions */
 size_t kstrlen(const char *str) {
@@ -76,9 +77,15 @@ static void cmd_help(void) {
     vga_print("  deadlock    - Jalankan demo Tahap 5: deteksi & pencegahan deadlock\n");
     vga_print("  meminfo     - Tampilkan memori heap terpakai & tersedia (Tahap 6)\n");
     vga_print("  memtest     - Jalankan demo Tahap 6: kmalloc/kfree, coalescing, OOM\n");
+    vga_print("  ls, touch <n>, write <n> <teks>, append <n> <teks>, cat <n>, rm <n>, stat <n>\n");
+    vga_print("              - Tahap 7: berkas teks di RAMDisk (Create/Read/Update/Delete)\n");
+    vga_print("  chmod <ooo> <n>, chown <user> <n>, df, fstest\n");
+    vga_print("              - izin berkas, info RAMDisk, uji otomatis VFS\n");
+    vga_print("  whoami, su [user], users, sectest\n");
+    vga_print("              - Tahap 8: pengguna, login, uji otomatis hak akses\n");
     vga_print("  uptime      - Tampilkan tick timer sejak boot (1 tick = 1 ms, PIT 1000 Hz)\n");
-    vga_print("  reboot      - Mulai ulang sistem lewat kontroler PS/2\n");
-    vga_print("  halt        - Hentikan CPU\n");
+    vga_print("  reboot      - Mulai ulang sistem lewat kontroler PS/2 (hanya root)\n");
+    vga_print("  halt        - Hentikan CPU (hanya root)\n");
     vga_print_colored("  [Navigasi]  - PgUp/PgDn atau Panah Atas/Bawah untuk scroll layar\n", VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
 }
 
@@ -94,6 +101,8 @@ static void cmd_about(void) {
     vga_print("  Sinkronisasi : Mutex & Semaphore blocking (antrean FIFO, status WAITING)\n");
     vga_print("  Deadlock     : Deteksi siklus (wait-for graph) + pencegahan lock ordering\n");
     vga_print("  Memori       : Heap 256 KB first-fit (split & coalesce), aman saat OOM\n");
+    vga_print("  Berkas       : VFS RAMDisk 32 berkas, isi di heap kmalloc, CRUD teks\n");
+    vga_print("  Proteksi     : Akun user (root/budi/ani), izin berkas oktal, perintah root-only\n");
 }
 
 static void cmd_reboot(void) {
@@ -148,14 +157,20 @@ void shell_execute(const char *input) {
         vga_print_int(sched_ticks() / 1000);
         vga_print(" detik)\n");
     } else if (kstrcmp(cmd, "reboot") == 0) {
-        cmd_reboot();
+        if (fscmd_require_root("reboot")) {     /* Tahap 8: hanya root */
+            cmd_reboot();
+        }
     } else if (kstrcmp(cmd, "halt") == 0) {
-        cmd_halt();
+        if (fscmd_require_root("halt")) {       /* Tahap 8: hanya root */
+            cmd_halt();
+        }
     } else if (kstrncmp(cmd, "echo ", 5) == 0) {
         vga_print(cmd + 5);
         vga_putchar('\n');
     } else if (kstrcmp(cmd, "echo") == 0) {
         vga_putchar('\n');
+    } else if (fscmd_try(cmd)) {
+        /* perintah berkas/pengguna (Tahap 7 & 8) sudah dijalankan di fscmd.c */
     } else {
         vga_print_colored("Unknown command: '", VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
         vga_print_colored(cmd, VGA_COLOR_WHITE, VGA_COLOR_BLACK);
@@ -167,8 +182,7 @@ void shell_run(void) {
     char input_buffer[SHELL_BUFFER_SIZE];
 
     while (1) {
-        vga_print_colored("dalfon", VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK);
-        vga_print_colored("> ", VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+        fscmd_print_prompt();                   /* "user@dalfon# " / "user@dalfon$ " */
 
         keyboard_readline(input_buffer, SHELL_BUFFER_SIZE);
         shell_execute(input_buffer);

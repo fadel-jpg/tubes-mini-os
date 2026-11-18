@@ -33,10 +33,13 @@ OBJS    := $(BUILD_DIR)/boot.o \
            $(BUILD_DIR)/sync.o \
            $(BUILD_DIR)/deadlock.o \
            $(BUILD_DIR)/memory.o \
+           $(BUILD_DIR)/vfs.o \
+           $(BUILD_DIR)/security.o \
+           $(BUILD_DIR)/fscmd.o \
            $(BUILD_DIR)/vga.o \
            $(BUILD_DIR)/keyboard.o
 
-.PHONY: all build run iso run-iso clean
+.PHONY: all build run iso run-iso clean test-vfs
 
 # Default target
 all: build
@@ -80,6 +83,18 @@ $(BUILD_DIR)/memory.o: kernel/memory.c
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
+$(BUILD_DIR)/vfs.o: kernel/vfs.c
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/security.o: kernel/security.c
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/fscmd.o: kernel/fscmd.c
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
 $(BUILD_DIR)/vga.o: drivers/vga.c
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -113,3 +128,12 @@ run-iso: iso
 clean:
 	rm -rf $(BUILD_DIR) $(BIN_DIR)
 	@echo "[CLEAN] Removed build/ and bin/ directories."
+
+# Uji VFS & proteksi tanpa QEMU: kode asli vfs/security/fscmd/memory dijalankan
+# sebagai program 32-bit biasa (layar & keyboard ditiru). Opsional.
+test-vfs:
+	@mkdir -p $(BUILD_DIR)
+	$(CC) -m32 -std=gnu11 -O1 -g -Wall -Wextra -Itests/stub -Iinclude -ffreestanding -fno-pic -fno-pie \
+	    -fno-stack-protector -static -nostdlib -Wl,-m,elf_i386 -Wl,-e,_start -Wl,-z,noexecstack \
+	    -o $(BUILD_DIR)/test_vfs tests/test_vfs.c kernel/vfs.c kernel/security.c kernel/fscmd.c kernel/memory.c
+	$(BUILD_DIR)/test_vfs
