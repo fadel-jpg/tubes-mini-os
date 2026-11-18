@@ -1,6 +1,15 @@
-# Dalfon OS — Mini-OS (x86 32-bit Bare-Metal Kernel)
+<div align="center">
 
-Proyek sistem operasi *bare-metal* **Dalfon OS** 32-bit (`i686`) yang dibuat dari nol menggunakan bahasa **C (freestanding)** dan **NASM Assembly** dengan standar **GNU Multiboot v1** untuk memenuhi Tugas Besar Sistem Operasi.
+# 🖥️ Dalfon OS — Mini-OS (x86 32-bit Bare-Metal Kernel)
+
+**Proyek sistem operasi bare-metal Dalfon OS 32-bit (i686) yang dibuat dari nol menggunakan bahasa C (freestanding) dan NASM Assembly dengan standar GNU Multiboot v1 untuk memenuhi Tugas Besar Sistem Operasi.**
+
+![Language](https://img.shields.io/badge/Language-C%20%7C%20NASM%20Assembly-00599C?style=flat-square&logo=c&logoColor=white)
+![Architecture](https://img.shields.io/badge/Architecture-x86%2032--bit%20(i686)-4A5568?style=flat-square)
+![Boot](https://img.shields.io/badge/Bootloader-GNU%20Multiboot%20v1-805AD5?style=flat-square)
+![Emulator](https://img.shields.io/badge/Emulator-QEMU-E53E3E?style=flat-square)
+
+</div>
 
 ---
 
