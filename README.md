@@ -21,7 +21,10 @@ mini-os/
 │   ├── sched.c             # Tahap 3: Preemptive Round Robin Scheduler berbasis Timer Interrupt (IRQ0)
 │   ├── sync.c              # Tahap 4: Sinkronisasi Mutex & Counting/Binary Semaphore (antrean FIFO)
 │   ├── deadlock.c          # Tahap 5: Demo deadlock (mutex berlawanan), deteksi wait-for graph, & pencegahan lock ordering
-│   └── memory.c            # Tahap 6: Alokator memori dinamis (kmalloc/kfree, first-fit, split & coalesce, aman saat OOM)
+│   ├── memory.c            # Tahap 6: Alokator memori dinamis (kmalloc/kfree, first-fit, split & coalesce, aman saat OOM)
+│   ├── vfs.c               # Tahap 7: VFS RAMDisk (32 berkas, CRUD teks, isi di heap kmalloc, izin oktal)
+│   ├── security.c          # Tahap 8: akun user (root/budi/ani), hash password djb2, login (su)
+│   └── fscmd.c             # Tahap 7 & 8: perintah CLI berkas/pengguna + uji otomatis fstest & sectest
 ├── drivers/
 │   ├── vga.c               # Driver layar VGA Text Mode (80x25 @ 0xB8000, scrolling, kursor, warna)
 │   └── keyboard.c          # Driver input PS/2 Keyboard berbasis polling (Port 0x60 & 0x64)
@@ -33,7 +36,14 @@ mini-os/
 │   ├── irq.h               # Header helper critical section interrupt (irq_save, irq_restore, cli, sti)
 │   ├── sched.h             # Header API Preemptive Round Robin Scheduler
 │   ├── sync.h              # Header struktur data waitq_t, mutex_t, dan semaphore_t
+│   ├── vfs.h               # Header API VFS RAMDisk & kode error (ENOENT, EACCES, ...)
+│   ├── security.h          # Header API akun user & autentikasi
+│   ├── fscmd.h             # Header perintah CLI berkas/pengguna
 │   └── shell.h             # Header deklarasi fungsi CLI shell & utilitas string
+├── tests/
+│   └── test_vfs.c          # Uji VFS & proteksi tanpa QEMU (make test-vfs)
+├── docs/
+│   └── Tahap7-8.md         # Catatan desain, urutan demo, tanya-jawab Tahap 7 & 8
 └── README.md               # Dokumentasi proyek
 ```
 
@@ -81,9 +91,9 @@ make clean
 
 ---
 
-## Daftar Perintah CLI Shell (`dalfon> `)
+## Daftar Perintah CLI Shell (`user@dalfon# `)
 
-Saat **Dalfon OS v0.4.0** menyala, Anda akan disambut oleh logo ASCII `DALFON OS` dan prompt interaktif `dalfon> `. Berikut adalah perintah yang didukung:
+Saat **Dalfon OS v0.4.0** menyala, Anda akan disambut oleh logo ASCII `DALFON OS` dan prompt interaktif `root@dalfon# ` (root) atau `user@dalfon$ ` (user biasa). Berikut adalah perintah yang didukung:
 
 | Perintah | Tahap | Deskripsi |
 | :--- | :---: | :--- |
@@ -102,3 +112,34 @@ Saat **Dalfon OS v0.4.0** menyala, Anda akan disambut oleh logo ASCII `DALFON OS
 | `uptime` | Tahap 3 | Menampilkan jumlah *timer ticks* (ms) dan detik sejak sistem *booting*. |
 | `reboot` | Tahap 1 | Melakukan *warm reboot* sistem melalui kontroler PS/2 (`0x64`). |
 | `halt` | Tahap 1 | Menghentikan eksekusi CPU (`cli; hlt`). |
+
+### Tahap 7 — Sistem Berkas (VFS RAMDisk)
+
+Berkas teks disimpan di RAM (hilang saat reboot). Maksimal 32 berkas, nama ≤ 23 karakter, isi ≤ 4096 byte. `<n>` = nama berkas.
+
+| Perintah | Deskripsi |
+| :--- | :--- |
+| `ls` | Daftar berkas: izin, pemilik, ukuran, nama. |
+| `touch <n>` | Membuat berkas kosong. |
+| `write <n> <teks>` | Menulis/menimpa isi berkas (`\n` = baris baru). |
+| `append <n> <teks>` | Menambah teks di akhir berkas tanpa menghapus isi lama. |
+| `cat <n>` | Menampilkan isi berkas. |
+| `rm <n>` | Menghapus berkas. |
+| `stat <n>` | Menampilkan ukuran, pemilik, dan izin satu berkas. |
+| `chmod <ooo> <n>` | Mengubah izin berkas (3 digit oktal, mis. `644`). |
+| `chown <user> <n>` | Mengganti pemilik berkas (hanya root). |
+| `df` | Pemakaian RAMDisk (jumlah berkas, byte) dan heap. |
+| `fstest` | Uji otomatis VFS: CRUD, batas ukuran, isi lama aman saat gagal tulis, tanpa kebocoran heap. |
+
+### Tahap 8 — Proteksi (Hak Akses Sederhana)
+
+Akun tetap di `kernel/security.c`: `root` (uid 0), `budi` (1000), `ani` (1001). Password disimpan sebagai hash djb2. OS boot sebagai root.
+
+| Perintah | Deskripsi |
+| :--- | :--- |
+| `whoami` | Menampilkan user yang sedang aktif. |
+| `su [user]` | Pindah user. Root pindah tanpa password; user biasa wajib password (tampil `*`). |
+| `users` | Daftar akun; user aktif ditandai `<- aktif`. |
+| `sectest` | Uji otomatis aturan izin, `chmod`/`chown`, dan login benar/salah. |
+
+Aturan izin: mode oktal ala UNIX (digit 1 = pemilik, digit 3 = lainnya; 4 = baca, 2 = tulis). Root melewati semua pemeriksaan. Hapus/`chmod` hanya oleh pemilik atau root; `chown`, `reboot`, `halt` hanya root. Detail desain dan urutan demo ada di `docs/Tahap7-8.md`.
