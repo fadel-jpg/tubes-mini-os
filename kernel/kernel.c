@@ -7,6 +7,8 @@
 #include "keyboard.h"
 #include "thread.h"
 #include "shell.h"
+#include "vfs.h"
+#include "security.h"
 #include "idt.h"
 #include "irq.h"
 #include "memory.h"
@@ -45,6 +47,20 @@ void kernel_main(uint32_t magic, uint32_t multiboot_info) {
     mem_init();
     vga_print_colored("[OK] ", VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK);
     vga_print("Kernel heap allocator initialized (256 KB, kmalloc/kfree).\n");
+
+    /* Tahap 8: akun pengguna (boot sebagai root) */
+    security_init();
+    vga_print_colored("[OK] ", VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK);
+    vga_print("Security module initialized (users: root, budi, ani).\n");
+
+    /* Tahap 7: VFS RAMDisk (butuh heap) + dua berkas contoh */
+    vfs_init();
+    vfs_create("readme.txt", SEC_UID_ROOT, 0644);
+    vfs_write("readme.txt", SEC_UID_ROOT, "Selamat datang di Dalfon OS!\n", 29, 0);
+    vfs_create("rahasia.txt", SEC_UID_ROOT, 0600);
+    vfs_write("rahasia.txt", SEC_UID_ROOT, "hanya root yang boleh membaca ini\n", 34, 0);
+    vga_print_colored("[OK] ", VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK);
+    vga_print("VFS RAMDisk initialized (readme.txt, rahasia.txt).\n");
 
     /* GDT, IDT, PIC, PIT (timer 1000 Hz) lalu aktifkan interrupt */
     interrupts_init(TIMER_HZ);
