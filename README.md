@@ -128,9 +128,3 @@ Saat **Dalfon OS v0.4.0** menyala, Anda akan disambut oleh logo ASCII `DALFON OS
 | `users` | Tahap 8 | Menampilkan daftar akun (`root`, `budi`, `ani`); user aktif ditandai `<- aktif`. |
 | `sectest` | Tahap 8 | Menjalankan pengujian **Tahap 8 (Proteksi)**: matriks izin root/budi/ani, aturan `chmod`/`chown`, dan login benar/salah. |
 
-**Catatan Tahap 7 & 8**
-- **RAMDisk:** maksimal 32 berkas, isi ≤ 4096 byte, disimpan di heap `kmalloc`; data hilang saat reboot. `<n>` = nama berkas.
-- **Akun:** tetap di `kernel/security.c` — `root` (uid 0), `budi` (1000), `ani` (1001); password disimpan sebagai hash djb2 (bukan teks). OS boot sebagai root.
-- **Aturan izin:** root melewati semua pemeriksaan. Hapus dan `chmod` hanya oleh pemilik atau root; `chown`, `reboot`, dan `halt` hanya root.
-- **Prompt:** `root@dalfon# ` untuk root, `user@dalfon$ ` untuk user biasa.
-- Detail desain dan urutan demo ada di `docs/Tahap7-8.md`.
